@@ -1,4 +1,8 @@
-# React + TypeScript + Vite
+# songskip
+A web app that identifies the songs that are dragging down your playlist and killing the vibe.
+
+
+# Made with React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
