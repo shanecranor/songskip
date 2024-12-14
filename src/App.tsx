@@ -1,12 +1,11 @@
 import  { ChangeEvent } from 'react';
-import {useObservable} from '@legendapp/state/react'
+import {useObservable, observer} from '@legendapp/state/react'
 import './App.css';
 import { SpotifyStreamingData } from './types';
 import { all, desc, op, table } from 'arquero';
-
-function App() {
+import { fileContent$ } from './state';
+const App = observer(() => {
   const file$ = useObservable<File | null>()
-  const fileContent$ = useObservable<SpotifyStreamingData[] | null>(null)
   const error$ = useObservable<string | null>(null)
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -60,12 +59,12 @@ function App() {
         {fileContent$.get() && (
           <div>
             <h2>File Content:</h2>
-            <pre>{JSON.stringify(fileContent$[0].get())}</pre> {/* Use <pre> for preserving formatting */}
+            <pre>{JSON.stringify(fileContent$.get())}</pre> {/* Use <pre> for preserving formatting */}
           </div>
         )}
       </div>
     </>
   );
-}
+})
 
 export default App;
