@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-export const ShaderBackground = ({ fragShader }: { fragShader: string }) => {
+export const ShaderBackground = ({ fragShader, vertShader }: { fragShader: string, vertShader: string }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -11,12 +11,7 @@ export const ShaderBackground = ({ fragShader }: { fragShader: string }) => {
       return;
     }
 
-    const vertexShaderSource = `#version 300 es
-    in vec4 aVertexPosition;
-    void main() {
-      gl_Position = aVertexPosition;
-    }
-  `;
+    const vertexShaderSource = vertShader;
     const fragmentShaderSource = `#version 300 es
     precision mediump float;
     uniform float iTime;
