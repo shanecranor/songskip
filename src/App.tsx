@@ -4,6 +4,7 @@ import './App.css';
 import { SpotifyStreamingData } from './types';
 import { all, desc, op, table } from 'arquero';
 import { fileContent$ } from './state';
+import { processData } from './processData';
 const App = observer(() => {
   const file$ = useObservable<File | null>()
   const error$ = useObservable<string | null>(null)
@@ -58,10 +59,12 @@ const App = observer(() => {
         {file && <p>Selected File: {file.name}</p>} {/* Display selected file name */}
         {fileContent$.get() && (
           <div>
-            <h2>File Content:</h2>
+            <h2>File Content:</h2> 
             <pre>{JSON.stringify(fileContent$.get())}</pre> {/* Use <pre> for preserving formatting */}
           </div>
         )}
+        <button onClick={()=>processData(fileContent$.get()||[])}> 
+        </button>
       </div>
     </>
   );
