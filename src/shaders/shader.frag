@@ -1,20 +1,24 @@
+float tri(float x) {
+  return abs(mod(x * 0.5, 1.0) - 0.5) * 4.0 - 1.0;
+}
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
 
     fragColor = vec4(0.0);
 
-    int numRects = 38;
+    int numRects = 35;
     float t = iTime;
     for (int i = -10; i < numRects+10; i++) {
         float f_i = float(i);
         float f_nr = float(numRects);
         float p = f_i / f_nr;
 
-        float rectWidth = 0.05;// + (1.0+sin(p*10.0+t/1.3))/8.0;
-        float rectHeight = 0.3;
+        float rectWidth = 0.05;//0.01 + abs(0.05*sin(p*4.0+t*0.32)*sin(p*4.0+t*0.32));
+        float rectHeight = 0.2;
         float centerX = p;
-        float centerY = sin(p * 6.0 + t) * 0.2 + 0.5;
-        float angle = (iTime * 0.8) + (p * 3.0 * sin(t*0.1));
+        float k = p + 0.2;
+        float centerY = tri(k*k*k + t*0.148) * 0.2 + 0.2;
+        float angle = (iTime * 0.8) + (p * 2.0); //* sin(t*0.1));
         
         vec2 rotatedUV = uv - vec2(centerX, centerY);
         rotatedUV = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * rotatedUV;
