@@ -117,6 +117,7 @@ export const ShaderBackground = ({ fragShader }: { fragShader: string }) => {
 
   return (
     <canvas
+      className="c-shader-background"
       ref={canvasRef}
       style={{ width: "100vw", height: "100vh", display: "block" }}
     />

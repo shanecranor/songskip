@@ -1,0 +1,49 @@
+.p-home {
+  > .c-shader-background {
+    position: fixed;
+    z-index: -1;
+  }
+  .page-contents {
+    display: flex;
+    min-height: 100dvh;
+    align-items: center;
+    justify-content: center;
+
+    .hero-box {
+      /* background-color: blueviolet; */
+      display: flex;
+      text-align: center;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 400px;
+      max-width: 900px;
+      .header {
+        font-size: clamp(2.5rem, 4.619vw + 1.305rem, 5rem);
+        line-height: clamp(3.75rem, 5.081vw + 2.435rem, 6.5rem);
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+      .sub-header {
+        font-size: clamp(1.25rem, 1.386vw + 0.891rem, 2rem);
+        line-height: clamp(1.875rem, 2.818vw + 1.146rem, 3.4rem);
+        font-weight: 500;
+        margin-bottom: 20px;
+      }
+      button {
+        background-color: rgb(109, 174, 247);
+        width: max-content;
+        color: rgb(5, 0, 0);
+        padding: 8px 24px;
+        border-radius: 999px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        &:hover {
+          background-color: rgb(65, 142, 230);
+        }
+      }
+    }
+  }
+}
