@@ -1,7 +1,16 @@
+dialog[open]::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px) saturate(80%);
+}
+
 .p-home {
   > .c-shader-background {
     position: fixed;
     z-index: -1;
+  }
+
+  dialog {
+    margin: auto;
   }
   .page-contents {
     display: flex;

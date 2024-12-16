@@ -1,9 +1,13 @@
+import { observer, useObservable } from "@legendapp/state/react";
 import "./App.css";
 import DataUpload from "./components/DataUpload/DataUpload.tsx";
 import { ShaderBackground } from "./components/ShaderBackground/ShaderBackground.tsx";
 import shaderString from "@/shaders/shader.frag?raw";
+import { useRef } from "react";
 
-const App = () => {
+const App = observer(() => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   return (
     <div className="p-home">
       <ShaderBackground fragShader={shaderString} />
@@ -15,12 +19,19 @@ const App = () => {
           <p className="sub-header">
             Find the songs that are killing your vibe.{" "}
           </p>
-          <button>Let's go</button>
-          {/* <DataUpload />  */}
+          <button onClick={() => dialogRef.current?.showModal()}>
+            Let's go
+          </button>
+          <dialog className="upload-modal" ref={dialogRef} onClose={() => {}}>
+            <DataUpload />
+            <form method="dialog">
+              <button>Close</button>
+            </form>
+          </dialog>
         </div>
       </div>
     </div>
   );
-};
+});
 
 export default App;
