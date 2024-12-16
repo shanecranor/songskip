@@ -1,7 +1,8 @@
 import { SpotifyStreamingData } from "./types";
 import { desc, from, op } from "arquero";
-import data from "./2024.json";
 export function processData(spotifyData: SpotifyStreamingData[]) {
+  // import data from "./2024.json";
+
   console.log("Processing data...");
   // console.log(spotifyData);
   // const dt = from(spotifyData);
