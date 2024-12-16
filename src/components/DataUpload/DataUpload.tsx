@@ -1,6 +1,6 @@
 import { ChangeEvent } from "react";
 import { useObservable, observer } from "@legendapp/state/react";
-import "./App.css";
+import "./DataUpload.css";
 import { fileContent$ } from "@/state";
 import { processData } from "@/dataFunctions/processData";
 const App = observer(() => {
@@ -49,8 +49,14 @@ const App = observer(() => {
   const file = file$.get();
   return (
     <div className="c-data-upload">
-      <h1>songskip proof of concept</h1>
       <p>upload your spotify GDPR data</p>
+      <p>
+        To download your data, go to{" "}
+        <a href="https://www.spotify.com/us/account/privacy/">
+          https://www.spotify.com/us/account/privacy/
+        </a>
+        , scroll down, and request your extended streaming history.
+      </p>
       <input type="file" onChange={handleFileChange} />
       {error$.get() && <p style={{ color: "red" }}>{error$.get()}</p>}{" "}
       {/* Display error messages */}
