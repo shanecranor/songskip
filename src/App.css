@@ -1,6 +1,6 @@
 dialog[open]::backdrop {
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(20px) saturate(80%);
+  /* backdrop-filter: blur(20px) saturate(80%); */
 }
 
 .p-home {
@@ -11,6 +11,11 @@ dialog[open]::backdrop {
 
   dialog {
     margin: auto;
+    border: none;
+    background: rgb(22, 22, 22);
+    max-width: 600px;
+    /* shadow */
+    box-shadow: 0 0 140px 40px rgba(0, 0, 0, 0.9);
   }
   .page-contents {
     display: flex;
@@ -39,7 +44,7 @@ dialog[open]::backdrop {
         font-weight: 500;
         margin-bottom: 20px;
       }
-      button {
+      > button {
         background-color: rgb(109, 174, 247);
         width: max-content;
         color: rgb(5, 0, 0);

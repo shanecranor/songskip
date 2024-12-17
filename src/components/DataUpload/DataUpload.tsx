@@ -1,9 +1,9 @@
-import { ChangeEvent } from "react";
+import { ChangeEvent, useRef } from "react";
 import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
 import { fileContent$ } from "@/state";
 import { processData } from "@/dataFunctions/processData";
-const App = observer(() => {
+const DataUpload = observer(() => {
   const file$ = useObservable<File | null>();
   const error$ = useObservable<string | null>(null);
 
@@ -46,18 +46,30 @@ const App = observer(() => {
 
     reader.readAsText(file); // Important: Read as text
   };
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
+  };
   const file = file$.get();
   return (
     <div className="c-data-upload">
-      <p>upload your spotify GDPR data</p>
-      <p>
-        To download your data, go to{" "}
-        <a href="https://www.spotify.com/us/account/privacy/">
-          https://www.spotify.com/us/account/privacy/
-        </a>
-        , scroll down, and request your extended streaming history.
-      </p>
-      <input type="file" onChange={handleFileChange} />
+      <h1 className="modal-header">Upload your Spotify data</h1>
+      <div>
+        <p>First, request your spotify data</p>
+        <ul>
+          <li>
+            Open the Privacy settings page by visiting <br />
+            <a href="https://www.spotify.com/us/account/privacy/">
+              https://www.spotify.com/us/account/privacy/
+            </a>
+          </li>
+          <li>Scroll down to find the "Download your data" section</li>
+          <li>Check the "Extended streaming history" checkbox</li>
+          <li>Click "Request data"</li>
+        </ul>
+        <p>After waiting for a few days, you can now upload the zip!</p>
+      </div>
       {error$.get() && <p style={{ color: "red" }}>{error$.get()}</p>}{" "}
       {/* Display error messages */}
       {file && <p>Selected File: {file.name}</p>}{" "}
@@ -69,9 +81,18 @@ const App = observer(() => {
           {/* Use <pre> for preserving formatting */}
         </div>
       )}
-      <button onClick={() => processData(fileContent$.get() || [])}></button>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        style={{ display: "none" }}
+      />
+      <button className="spotify-button" onClick={handleButtonClick}>
+        Select File
+      </button>
+      {/* <button onClick={() => processData(fileContent$.get() || [])}></button> */}
     </div>
   );
 });
 
-export default App;
+export default DataUpload;
