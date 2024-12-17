@@ -21,7 +21,7 @@
 
   ul {
     padding-left: 22px;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
   }
 
   li {
@@ -62,16 +62,5 @@
     margin-top: 8px;
     font-size: 0.9rem;
     font-weight: 600;
-  }
-
-  pre {
-    background-color: #f9f9f9;
-    padding: 12px;
-    border-radius: 8px;
-    overflow: auto;
-    max-height: 300px; /* Prevent file content overflow */
-    margin: 8px 0;
-    line-height: 1.4;
-    font-size: 0.9rem;
   }
 }
