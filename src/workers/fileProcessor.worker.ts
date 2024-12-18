@@ -1,5 +1,4 @@
 import { unzip, strFromU8 } from "fflate";
-import { uiState$ } from "@/state";
 
 const readFileContent = async (file: File) => {
   return new Promise((resolve, reject) => {
@@ -13,6 +12,10 @@ const readFileContent = async (file: File) => {
             const jsonContent = JSON.parse(event.target.result as string);
             resolve(jsonContent);
           } else if (fileExtension === "zip") {
+            self.postMessage({
+              status: "update",
+              message: "unzipping files, this may take a while...",
+            });
             const zipContent = await unzipFile(
               new Uint8Array(event.target.result as ArrayBuffer)
             );
@@ -77,9 +80,12 @@ const unzipFile = async (arrayBuffer: Uint8Array): Promise<any> => {
 self.onmessage = async (event) => {
   const file = event.data;
   try {
-    uiState$.loadingStatus.set("Reading file content...");
+    self.postMessage({ status: "update", message: "Reading file content..." });
     const result = await readFileContent(file);
-    uiState$.loadingStatus.set("File content read successfully.");
+    self.postMessage({
+      status: "update",
+      message: "Finished reading file content",
+    });
     self.postMessage({ status: "success", data: result });
   } catch (error) {
     self.postMessage({ status: "error", message: error });

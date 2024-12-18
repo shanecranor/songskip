@@ -2,8 +2,8 @@ import { ChangeEvent, useRef } from "react";
 import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
 import { fileContent$, uiState$, setError, resetUiState } from "@/state";
-import { processData } from "@/dataFunctions/processData";
-
+// import { processData } from "@/dataFunctions/processData";
+import fileProcessorWorker from "@/workers/fileProcessor.worker.ts?worker";
 const DataUpload = observer(() => {
   const file$ = useObservable<File | null>();
 
@@ -22,13 +22,15 @@ const DataUpload = observer(() => {
 
   const processFileInWorker = (file: File) => {
     uiState$.loadingStatus.set("Processing file in worker...");
-    const worker = new Worker(new URL("../../workers/fileProcessor.worker.ts", import.meta.url));
-    
+    const worker = new fileProcessorWorker();
+
     worker.onmessage = (event) => {
       const { status, data, message } = event.data;
       if (status === "success") {
         fileContent$.set(data);
         uiState$.loadingStatus.set("File processed successfully.");
+      } else if (status === "update") {
+        uiState$.loadingStatus.set(message);
       } else {
         setError("Error processing file: " + message);
       }
@@ -111,9 +113,8 @@ const DataUpload = observer(() => {
       {/* Display selected file name */}
       {fileContent$.get() && (
         <div>
-          <h2>File Content:</h2>
-          <pre>{JSON.stringify(fileContent$.get())}</pre>{" "}
-          {/* Use <pre> for preserving formatting */}
+          <h2>File has content!</h2>
+          {/* <pre>{JSON.stringify(fileContent$.get())}</pre>{" "} */}
         </div>
       )}
       <input
