@@ -3,7 +3,6 @@ import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
 import { fileContent$, uiState$, setError, resetUiState } from "@/state";
 import { processData } from "@/dataFunctions/processData";
-import { unzipFile } from "@/dataFunctions/unzipFile";
 
 const DataUpload = observer(() => {
   const file$ = useObservable<File | null>();
@@ -12,7 +11,7 @@ const DataUpload = observer(() => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       file$.set(selectedFile);
-      readFileContent(selectedFile);
+      processFileInWorker(selectedFile);
       resetUiState();
     } else {
       file$.set(null);
@@ -21,53 +20,25 @@ const DataUpload = observer(() => {
     }
   };
 
-  const readFileContent = async (file: File) => {
-    uiState$.loadingStatus.set("Reading file...");
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      try {
-        if (event.target?.result) {
-          const fileExtension = file.name.split(".").pop()?.toLowerCase();
-          if (fileExtension === "json") {
-            uiState$.loadingStatus.set("Parsing JSON...");
-            const jsonContent = JSON.parse(event.target.result as string); // Parse as JSON
-            fileContent$.set(jsonContent); // Update state with the parsed JSON object
-          } else if (fileExtension === "zip") {
-            uiState$.loadingStatus.set("Unzipping...");
-            const zipContent = await unzipFile(
-              new Uint8Array(event.target.result as ArrayBuffer)
-            );
-            uiState$.loadingStatus.set("Extracting JSON files...");
-            fileContent$.set(zipContent); // Update state with the extracted JSON object
-          } else {
-            setError("Unsupported file type.");
-            fileContent$.set(null);
-          }
-        } else {
-          setError("File is empty or has no content.");
-          fileContent$.set(null);
-        }
-      } catch (error) {
-        // Catch JSON parsing errors
-        setError("Error parsing file: " + (error as Error).message);
-        fileContent$.set(null);
+  const processFileInWorker = (file: File) => {
+    uiState$.loadingStatus.set("Processing file in worker...");
+    const worker = new Worker(new URL("../../workers/fileProcessor.worker.ts", import.meta.url));
+    
+    worker.onmessage = (event) => {
+      const { status, data, message } = event.data;
+      if (status === "success") {
+        fileContent$.set(data);
+        uiState$.loadingStatus.set("File processed successfully.");
+      } else {
+        setError("Error processing file: " + message);
       }
     };
 
-    reader.onerror = () => {
-      setError("Error reading file.");
-      fileContent$.set(null);
+    worker.onerror = () => {
+      setError("Error in worker.");
     };
 
-    if (file.name.endsWith(".json")) {
-      reader.readAsText(file); // Read JSON as text
-    } else if (file.name.endsWith(".zip")) {
-      reader.readAsArrayBuffer(file); // Read ZIP as ArrayBuffer
-    } else {
-      setError("Unsupported file type.");
-      fileContent$.set(null);
-    }
+    worker.postMessage(file);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
