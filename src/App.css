@@ -10,10 +10,12 @@ dialog[open]::backdrop {
   }
 
   dialog {
+    border-radius: 10px;
     margin: auto;
     border: none;
     background: rgb(22, 22, 22);
-    max-width: 600px;
+    max-width: 800px;
+    width: 600px;
     /* shadow */
     box-shadow: 0 0 140px 40px rgba(0, 0, 0, 0.9);
   }

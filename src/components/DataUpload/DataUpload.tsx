@@ -54,8 +54,42 @@ const DataUpload = observer(() => {
   const file = file$.get();
   return (
     <div className="c-data-upload">
-      <h1 className="modal-header">Upload your Spotify data</h1>
-      <div>
+      <div className="modal-header">
+        <h1>Upload your Spotify data</h1>{" "}
+        <form className="close-modal-x-container" method="dialog">
+          <button className="close-modal-x">
+            <svg
+              width="32px"
+              height="32px"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g id="bgCarrier" stroke-width="0" />
+              <g
+                id="tracerCarrier"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <g id="iconCarrier">
+                <path
+                  d="M7 17L16.8995 7.10051"
+                  stroke="#d0d0d0"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M7 7.00001L16.8995 16.8995"
+                  stroke="#d0d0d0"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </g>
+            </svg>
+          </button>
+        </form>
+      </div>
+      <div className="instructions">
         <p>First, request your spotify data</p>
         <ul>
           <li>

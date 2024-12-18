@@ -24,9 +24,6 @@ const App = observer(() => {
           </button>
           <dialog className="upload-modal" ref={dialogRef} onClose={() => {}}>
             <DataUpload />
-            {/* <form method="dialog">
-              <button>Close</button>
-            </form> */}
           </dialog>
         </div>
       </div>
