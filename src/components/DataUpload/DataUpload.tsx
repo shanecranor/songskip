@@ -1,57 +1,84 @@
 import { ChangeEvent, useRef } from "react";
 import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
-import { fileContent$ } from "@/state";
+import { fileContent$, uiState$, setError, resetUiState } from "@/state";
 import { processData } from "@/dataFunctions/processData";
+import { unzipFile } from "@/dataFunctions/unzipFile";
+
 const DataUpload = observer(() => {
   const file$ = useObservable<File | null>();
-  const error$ = useObservable<string | null>(null);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       file$.set(selectedFile);
       readFileContent(selectedFile);
-      error$.set(null); // Clear any previous errors
+      resetUiState();
     } else {
       file$.set(null);
       fileContent$.set(null);
-      error$.set("No file selected.");
+      setError("No file selected.");
     }
   };
 
-  const readFileContent = (file: File) => {
+  const readFileContent = async (file: File) => {
+    uiState$.loadingStatus.set("Reading file...");
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         if (event.target?.result) {
-          const jsonContent = JSON.parse(event.target.result as string); // Parse as JSON
-          fileContent$.set(jsonContent); // Update state with the parsed JSON object
+          const fileExtension = file.name.split(".").pop()?.toLowerCase();
+          if (fileExtension === "json") {
+            uiState$.loadingStatus.set("Parsing JSON...");
+            const jsonContent = JSON.parse(event.target.result as string); // Parse as JSON
+            fileContent$.set(jsonContent); // Update state with the parsed JSON object
+          } else if (fileExtension === "zip") {
+            uiState$.loadingStatus.set("Unzipping...");
+            const zipContent = await unzipFile(
+              new Uint8Array(event.target.result as ArrayBuffer)
+            );
+            uiState$.loadingStatus.set("Extracting JSON files...");
+            fileContent$.set(zipContent); // Update state with the extracted JSON object
+          } else {
+            setError("Unsupported file type.");
+            fileContent$.set(null);
+          }
         } else {
-          error$.set("File is empty or has no content.");
+          setError("File is empty or has no content.");
           fileContent$.set(null);
         }
       } catch (error) {
         // Catch JSON parsing errors
-        error$.set("Error parsing JSON: " + (error as Error).message);
+        setError("Error parsing file: " + (error as Error).message);
         fileContent$.set(null);
       }
     };
 
     reader.onerror = () => {
-      error$.set("Error reading file.");
+      setError("Error reading file.");
       fileContent$.set(null);
     };
 
-    reader.readAsText(file); // Important: Read as text
+    if (file.name.endsWith(".json")) {
+      reader.readAsText(file); // Read JSON as text
+    } else if (file.name.endsWith(".zip")) {
+      reader.readAsArrayBuffer(file); // Read ZIP as ArrayBuffer
+    } else {
+      setError("Unsupported file type.");
+      fileContent$.set(null);
+    }
   };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
   };
+
   const file = file$.get();
+  const loadingString = uiState$.loadingStatus.get();
+  const hasError = uiState$.isError.get();
   return (
     <div className="c-data-upload">
       <div className="modal-header">
@@ -104,8 +131,11 @@ const DataUpload = observer(() => {
         </ul>
         <p>After waiting for a few days, you can now upload the zip!</p>
       </div>
-      {error$.get() && <p style={{ color: "red" }}>{error$.get()}</p>}{" "}
-      {/* Display error messages */}
+      {loadingString && (
+        <p className={`loading-message ${hasError ? "error" : ""}`}>
+          {loadingString}
+        </p>
+      )}
       {file && <p>Selected File: {file.name}</p>}{" "}
       {/* Display selected file name */}
       {fileContent$.get() && (
