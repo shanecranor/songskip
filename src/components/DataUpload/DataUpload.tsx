@@ -3,6 +3,8 @@ import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
 import { fileContent$ } from "@/state";
 import { processData } from "@/dataFunctions/processData";
+import { unzipFile } from "@/dataFunctions/unzipFile";
+
 const DataUpload = observer(() => {
   const file$ = useObservable<File | null>();
   const error$ = useObservable<string | null>(null);
@@ -20,21 +22,30 @@ const DataUpload = observer(() => {
     }
   };
 
-  const readFileContent = (file: File) => {
+  const readFileContent = async (file: File) => {
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         if (event.target?.result) {
-          const jsonContent = JSON.parse(event.target.result as string); // Parse as JSON
-          fileContent$.set(jsonContent); // Update state with the parsed JSON object
+          const fileExtension = file.name.split('.').pop()?.toLowerCase();
+          if (fileExtension === 'json') {
+            const jsonContent = JSON.parse(event.target.result as string); // Parse as JSON
+            fileContent$.set(jsonContent); // Update state with the parsed JSON object
+          } else if (fileExtension === 'zip') {
+            const zipContent = await unzipFile(new Uint8Array(event.target.result as ArrayBuffer));
+            fileContent$.set(zipContent); // Update state with the extracted JSON object
+          } else {
+            error$.set("Unsupported file type.");
+            fileContent$.set(null);
+          }
         } else {
           error$.set("File is empty or has no content.");
           fileContent$.set(null);
         }
       } catch (error) {
         // Catch JSON parsing errors
-        error$.set("Error parsing JSON: " + (error as Error).message);
+        error$.set("Error parsing file: " + (error as Error).message);
         fileContent$.set(null);
       }
     };
@@ -44,13 +55,22 @@ const DataUpload = observer(() => {
       fileContent$.set(null);
     };
 
-    reader.readAsText(file); // Important: Read as text
+    if (file.name.endsWith('.json')) {
+      reader.readAsText(file); // Read JSON as text
+    } else if (file.name.endsWith('.zip')) {
+      reader.readAsArrayBuffer(file); // Read ZIP as ArrayBuffer
+    } else {
+      error$.set("Unsupported file type.");
+      fileContent$.set(null);
+    }
   };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
   };
+
   const file = file$.get();
   return (
     <div className="c-data-upload">
