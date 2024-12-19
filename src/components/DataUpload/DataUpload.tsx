@@ -25,9 +25,8 @@ const DataUpload = observer(() => {
     const worker = new fileProcessorWorker();
 
     worker.onmessage = (event) => {
-      const { status, data, message } = event.data;
+      const { status, message } = event.data;
       if (status === "success") {
-        fileContent$.set(data);
         uiState$.loadingStatus.set("File processed successfully.");
       } else if (status === "update") {
         uiState$.loadingStatus.set(message);
@@ -68,21 +67,21 @@ const DataUpload = observer(() => {
               <g id="bgCarrier" stroke-width="0" />
               <g
                 id="tracerCarrier"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
               <g id="iconCarrier">
                 <path
                   d="M7 17L16.8995 7.10051"
                   stroke="#d0d0d0"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 <path
                   d="M7 7.00001L16.8995 16.8995"
                   stroke="#d0d0d0"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </g>
             </svg>
