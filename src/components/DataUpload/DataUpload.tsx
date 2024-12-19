@@ -2,9 +2,8 @@ import { ChangeEvent, useRef } from "react";
 import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
 import { fileContent$, uiState$, setError, resetUiState } from "@/state";
-import { processData } from "@/dataFunctions/processData";
-import { unzipFile } from "@/dataFunctions/unzipFile";
-
+// import { processData } from "@/dataFunctions/processData";
+import fileProcessorWorker from "@/workers/fileProcessor.worker.ts?worker";
 const DataUpload = observer(() => {
   const file$ = useObservable<File | null>();
 
@@ -12,7 +11,7 @@ const DataUpload = observer(() => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       file$.set(selectedFile);
-      readFileContent(selectedFile);
+      processFileInWorker(selectedFile);
       resetUiState();
     } else {
       file$.set(null);
@@ -21,53 +20,26 @@ const DataUpload = observer(() => {
     }
   };
 
-  const readFileContent = async (file: File) => {
-    uiState$.loadingStatus.set("Reading file...");
-    const reader = new FileReader();
+  const processFileInWorker = (file: File) => {
+    uiState$.loadingStatus.set("Processing file in worker...");
+    const worker = new fileProcessorWorker();
 
-    reader.onload = async (event) => {
-      try {
-        if (event.target?.result) {
-          const fileExtension = file.name.split(".").pop()?.toLowerCase();
-          if (fileExtension === "json") {
-            uiState$.loadingStatus.set("Parsing JSON...");
-            const jsonContent = JSON.parse(event.target.result as string); // Parse as JSON
-            fileContent$.set(jsonContent); // Update state with the parsed JSON object
-          } else if (fileExtension === "zip") {
-            uiState$.loadingStatus.set("Unzipping...");
-            const zipContent = await unzipFile(
-              new Uint8Array(event.target.result as ArrayBuffer)
-            );
-            uiState$.loadingStatus.set("Extracting JSON files...");
-            fileContent$.set(zipContent); // Update state with the extracted JSON object
-          } else {
-            setError("Unsupported file type.");
-            fileContent$.set(null);
-          }
-        } else {
-          setError("File is empty or has no content.");
-          fileContent$.set(null);
-        }
-      } catch (error) {
-        // Catch JSON parsing errors
-        setError("Error parsing file: " + (error as Error).message);
-        fileContent$.set(null);
+    worker.onmessage = (event) => {
+      const { status, message } = event.data;
+      if (status === "success") {
+        uiState$.loadingStatus.set("File processed successfully.");
+      } else if (status === "update") {
+        uiState$.loadingStatus.set(message);
+      } else {
+        setError("Error processing file: " + message);
       }
     };
 
-    reader.onerror = () => {
-      setError("Error reading file.");
-      fileContent$.set(null);
+    worker.onerror = () => {
+      setError("Error in worker.");
     };
 
-    if (file.name.endsWith(".json")) {
-      reader.readAsText(file); // Read JSON as text
-    } else if (file.name.endsWith(".zip")) {
-      reader.readAsArrayBuffer(file); // Read ZIP as ArrayBuffer
-    } else {
-      setError("Unsupported file type.");
-      fileContent$.set(null);
-    }
+    worker.postMessage(file);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,21 +67,21 @@ const DataUpload = observer(() => {
               <g id="bgCarrier" stroke-width="0" />
               <g
                 id="tracerCarrier"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
               <g id="iconCarrier">
                 <path
                   d="M7 17L16.8995 7.10051"
                   stroke="#d0d0d0"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 <path
                   d="M7 7.00001L16.8995 16.8995"
                   stroke="#d0d0d0"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </g>
             </svg>
@@ -140,9 +112,8 @@ const DataUpload = observer(() => {
       {/* Display selected file name */}
       {fileContent$.get() && (
         <div>
-          <h2>File Content:</h2>
-          <pre>{JSON.stringify(fileContent$.get())}</pre>{" "}
-          {/* Use <pre> for preserving formatting */}
+          <h2>File has content!</h2>
+          {/* <pre>{JSON.stringify(fileContent$.get())}</pre>{" "} */}
         </div>
       )}
       <input
