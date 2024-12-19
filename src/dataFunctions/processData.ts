@@ -1,14 +1,22 @@
-import { SpotifyStreamingData } from "./types";
-import { desc, from, op } from "arquero";
-export function processData(spotifyData: SpotifyStreamingData[]) {
+import { SpotifyStreamingData } from "@/types";
+import { ColumnTable, desc, from, op, range } from "arquero";
+interface ProcessedData {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  totals: object[];
+  mostSkipped: object[];
+}
+export function processData(
+  spotifyData: SpotifyStreamingData[]
+): ProcessedData {
   // import data from "./2024.json";
 
   console.log("Processing data...");
   // console.log(spotifyData);
-  // const dt = from(spotifyData);
-  const dt = from(data as SpotifyStreamingData[]);
+  const dt = from(spotifyData);
   dt.print(2);
-  dt.rollup({ skips: op.sum("skipped"), count: op.count() }).print();
+  const totals = dt
+    .rollup({ skips: op.sum("skipped"), count: op.count() })
+    .objects();
   //loading screen
   //unzipping
   //loading into arquero
@@ -16,7 +24,8 @@ export function processData(spotifyData: SpotifyStreamingData[]) {
   //you skipped 18% of the songs you listened to this year
   //find out which songs you hated the most
   //which songs did you skip (on average) the fastest
-  dt.groupby("master_metadata_track_name")
+  const mostSkipped = dt
+    .groupby("master_metadata_track_name")
     .rollup({
       total_plays: op.count(),
       skips: op.sum("skipped"),
@@ -31,5 +40,7 @@ export function processData(spotifyData: SpotifyStreamingData[]) {
     .filter((d) => d.skipability > 0.48)
     // .orderby(desc("skipability"), desc("count"))
     .orderby("time_to_skip")
-    .print(20);
+    .select(range(0, 10))
+    .objects();
+  return { totals, mostSkipped };
 }

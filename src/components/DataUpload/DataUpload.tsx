@@ -1,7 +1,7 @@
 import { ChangeEvent, useRef } from "react";
 import { useObservable, observer } from "@legendapp/state/react";
 import "./DataUpload.css";
-import { fileContent$, uiState$, setError, resetUiState } from "@/state";
+import { musicData$, uiState$, setError, resetUiState } from "@/state";
 // import { processData } from "@/dataFunctions/processData";
 import fileProcessorWorker from "@/workers/fileProcessor.worker.ts?worker";
 const DataUpload = observer(() => {
@@ -15,7 +15,7 @@ const DataUpload = observer(() => {
       resetUiState();
     } else {
       file$.set(null);
-      fileContent$.set(null);
+      musicData$.set(null);
       setError("No file selected.");
     }
   };
@@ -25,9 +25,10 @@ const DataUpload = observer(() => {
     const worker = new fileProcessorWorker();
 
     worker.onmessage = (event) => {
-      const { status, message } = event.data;
+      const { status, data, message } = event.data;
       if (status === "success") {
         uiState$.loadingStatus.set("File processed successfully.");
+        musicData$.set(data);
       } else if (status === "update") {
         uiState$.loadingStatus.set(message);
       } else {
@@ -64,7 +65,7 @@ const DataUpload = observer(() => {
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <g id="bgCarrier" stroke-width="0" />
+              <g id="bgCarrier" strokeWidth="0" />
               <g
                 id="tracerCarrier"
                 strokeLinecap="round"
@@ -110,10 +111,10 @@ const DataUpload = observer(() => {
       )}
       {file && <p>Selected File: {file.name}</p>}{" "}
       {/* Display selected file name */}
-      {fileContent$.get() && (
+      {musicData$.get() && (
         <div>
           <h2>File has content!</h2>
-          {/* <pre>{JSON.stringify(fileContent$.get())}</pre>{" "} */}
+          <pre>{JSON.stringify(musicData$.get())}</pre>{" "}
         </div>
       )}
       <input
@@ -125,7 +126,6 @@ const DataUpload = observer(() => {
       <button className="spotify-button" onClick={handleButtonClick}>
         Select File
       </button>
-      {/* <button onClick={() => processData(fileContent$.get() || [])}></button> */}
     </div>
   );
 });

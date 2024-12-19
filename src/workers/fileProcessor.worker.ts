@@ -1,3 +1,4 @@
+import { processData } from "@/dataFunctions/processData";
 import { SpotifyStreamingData } from "@/types";
 import { unzip, strFromU8, zip } from "fflate";
 
@@ -84,7 +85,7 @@ const decompress = async (arrayBuffer: Uint8Array): Promise<unknown> => {
 
   return jsonData;
 };
-export let storedData: SpotifyStreamingData | null = null;
+export let storedData: SpotifyStreamingData[] | null = null;
 self.onmessage = async (event) => {
   const file = event.data;
   try {
@@ -95,10 +96,17 @@ self.onmessage = async (event) => {
     console.log(storedData);
     self.postMessage({
       status: "update",
-      message: "Finished reading file content",
+      message: "Doing some data science magic...",
     });
-    self.postMessage({ status: "success" });
+    if (!storedData) {
+      throw new Error("Data is falsey");
+    }
+    const displayData = processData(storedData);
+    console.log("LOGGING DISPLAY DATA");
+    console.log(displayData);
+    self.postMessage({ status: "success", data: displayData });
   } catch (error) {
+    console.error(error);
     self.postMessage({ status: "error", message: error });
   }
 };

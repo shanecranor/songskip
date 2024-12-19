@@ -1,6 +1,5 @@
-import { SpotifyStreamingData } from "./types";
 import { observable } from "@legendapp/state";
-export const fileContent$ = observable<SpotifyStreamingData[] | null>(null);
+export const musicData$ = observable<any>();
 
 interface UiState {
   loadingStatus: string | null;
