@@ -29,6 +29,7 @@ const DataUpload = observer(() => {
       if (status === "success") {
         uiState$.loadingStatus.set("File processed successfully.");
         musicData$.set(data);
+        uiState$.recap.set({ started: true, page: 0 });
       } else if (status === "update") {
         uiState$.loadingStatus.set(message);
       } else {
@@ -110,22 +111,29 @@ const DataUpload = observer(() => {
         </p>
       )}
       {file && <p>Selected File: {file.name}</p>}{" "}
-      {/* Display selected file name */}
-      {musicData$.get() && (
-        <div>
-          <h2>File has content!</h2>
-          <pre>{JSON.stringify(musicData$.get())}</pre>{" "}
-        </div>
-      )}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
         style={{ display: "none" }}
       />
-      <button className="spotify-button" onClick={handleButtonClick}>
-        Select File
-      </button>
+      {!musicData$.get() ? (
+        <button
+          className="buttonify spotify-button"
+          onClick={handleButtonClick}
+        >
+          Select File
+        </button>
+      ) : (
+        <form method="dialog">
+          <button
+            className="buttonify"
+            onClick={() => uiState$.recap.set({ started: true, page: 0 })}
+          >
+            Lets go
+          </button>
+        </form>
+      )}
     </div>
   );
 });

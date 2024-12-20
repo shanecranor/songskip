@@ -1,10 +1,15 @@
 import { observable } from "@legendapp/state";
-export const musicData$ = observable<any>();
+import { ProcessedData } from "./dataFunctions/processData";
+export const musicData$ = observable<ProcessedData | null>(null);
 
 interface UiState {
   loadingStatus: string | null;
   isError: boolean;
   isComplete: boolean;
+  recap?: {
+    started: boolean;
+    page: number;
+  };
 }
 
 const initialUiState: UiState = {

@@ -92,7 +92,6 @@ self.onmessage = async (event) => {
     self.postMessage({ status: "update", message: "Reading file content..." });
     const result = await readFileContent(file);
     storedData = result as any;
-    console.log("LOGGING DATA");
     console.log(storedData);
     self.postMessage({
       status: "update",

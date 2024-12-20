@@ -1,22 +1,22 @@
 import { SpotifyStreamingData } from "@/types";
 import { ColumnTable, desc, from, op, range } from "arquero";
-interface ProcessedData {
+export interface ProcessedData {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  totals: object[];
-  mostSkipped: object[];
+  totals: { skips: number; fwdbtnCount: number; count: number };
+  mostSkipped: any[];
 }
 export function processData(
   spotifyData: SpotifyStreamingData[]
 ): ProcessedData {
-  // import data from "./2024.json";
-
-  console.log("Processing data...");
-  // console.log(spotifyData);
   const dt = from(spotifyData);
-  dt.print(2);
   const totals = dt
-    .rollup({ skips: op.sum("skipped"), count: op.count() })
-    .objects();
+    .rollup({
+      skips: op.sum("skipped"),
+      fwdbtnCount: (d) =>
+        op.sum(d.reason_end === "fwdbtn" && !d.skipped ? 1 : 0),
+      count: op.count(),
+    })
+    .objects()[0];
   //loading screen
   //unzipping
   //loading into arquero
@@ -29,7 +29,8 @@ export function processData(
     .rollup({
       total_plays: op.count(),
       skips: op.sum("skipped"),
-      // fwdbtnCount: (d) => op.sum(d.reason_end === "fwdbtn" ? 1 : 0),
+      fwdbtnCount: (d) =>
+        op.sum(d.reason_end === "fwdbtn" && !d.skipped ? 1 : 0),
       // endplayCount: (d) => op.sum(d.reason_end === "endplay" ? 1 : 0),
       // trackdoneCount: (d) => op.sum(d.reason_end === "trackdone" ? 1 : 0),
       suffered: (d) => op.sum(d.ms_played * 0.001),

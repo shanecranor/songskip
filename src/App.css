@@ -46,16 +46,11 @@ dialog[open]::backdrop {
         font-weight: 500;
         margin-bottom: 20px;
       }
-      > button {
-        background-color: rgb(109, 174, 247);
+      > .buttonify {
         width: max-content;
         color: rgb(5, 0, 0);
-        padding: 8px 24px;
         border-radius: 999px;
         font-weight: 700;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: none;
         &:hover {
           background-color: rgb(65, 142, 230);
         }

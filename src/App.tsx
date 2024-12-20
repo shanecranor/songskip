@@ -4,10 +4,10 @@ import DataUpload from "./components/DataUpload/DataUpload.tsx";
 import { ShaderBackground } from "./components/ShaderBackground/ShaderBackground.tsx";
 import shaderString from "@/shaders/shader.frag?raw";
 import { useRef } from "react";
-
+import { uiState$ } from "./state.ts";
+import { Slideshow } from "./components/Slideshow/Slideshow.tsx";
 const App = observer(() => {
   const dialogRef = useRef<HTMLDialogElement>(null);
-
   return (
     <div className="p-home">
       <ShaderBackground fragShader={shaderString} />
@@ -19,13 +19,17 @@ const App = observer(() => {
           <p className="sub-header">
             Find the songs that are killing your vibe.{" "}
           </p>
-          <button onClick={() => dialogRef.current?.showModal()}>
+          <button
+            className="buttonify"
+            onClick={() => dialogRef.current?.showModal()}
+          >
             Let's go
           </button>
           <dialog className="upload-modal" ref={dialogRef} onClose={() => {}}>
             <DataUpload />
           </dialog>
         </div>
+        <Slideshow />
       </div>
     </div>
   );
