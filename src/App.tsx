@@ -4,7 +4,7 @@ import DataUpload from "./components/DataUpload/DataUpload.tsx";
 import { ShaderBackground } from "./components/ShaderBackground/ShaderBackground.tsx";
 import shaderString from "@/shaders/shader.frag?raw";
 import { useRef } from "react";
-import { uiState$ } from "./state.ts";
+import { musicData$, uiState$ } from "./state.ts";
 import { Slideshow } from "./components/Slideshow/Slideshow.tsx";
 const App = observer(() => {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -29,7 +29,7 @@ const App = observer(() => {
             <DataUpload />
           </dialog>
         </div>
-        <Slideshow />
+        {musicData$.get() && <Slideshow />}
       </div>
     </div>
   );
