@@ -10,9 +10,10 @@ const App = observer(() => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <div className="p-home">
-      <ShaderBackground fragShader={shaderString} />
+      {/* <ShaderBackground fragShader={shaderString} /> */}
       <div className="page-contents">
-        <div className="hero-box">
+        <Slideshow />
+        {/* <div className="hero-box">
           <h1 className="header">
             See the music you <em>hated</em> in {new Date().getFullYear()}
           </h1>
@@ -29,7 +30,7 @@ const App = observer(() => {
             <DataUpload />
           </dialog>
         </div>
-        {musicData$.get() && <Slideshow />}
+        {musicData$.get() && <Slideshow />} */}
       </div>
     </div>
   );
