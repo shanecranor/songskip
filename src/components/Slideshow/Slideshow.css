@@ -1,7 +1,7 @@
 .c-slideshow {
-  width: 400px;
-  height: 400px;
-  background: blue;
+  width: 100dvw;
+  height: 100dvh;
+  /* background: blue; */
 }
 
 .swiper {
@@ -12,7 +12,7 @@
 .swiper-slide {
   text-align: center;
   font-size: 18px;
-  background: red;
+  /* background: red; */
 
   /* Center slide text vertically */
   display: flex;
@@ -25,4 +25,35 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.song-list {
+  display: flex;
+  flex-direction: column;
+  .song-list-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    align-items: center;
+    .skip-time {
+      width: 100px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      padding: 16px;
+    }
+    .song-details {
+      max-width: 400px;
+      white-space: nowrap;
+      text-align: left;
+      .song-name {
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .artist-name {
+        font-weight: 400;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
 }

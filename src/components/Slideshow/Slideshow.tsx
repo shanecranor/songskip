@@ -10,6 +10,9 @@ import "./Slideshow.css";
 
 // import required modules
 import { Navigation, Pagination } from "swiper/modules";
+import { Page0 } from "./Page0";
+import { Page1 } from "./Page1";
+import { Page2 } from "./Page2";
 
 export const Slideshow = () => {
   return (
@@ -20,9 +23,15 @@ export const Slideshow = () => {
         modules={[Navigation, Pagination]}
         className="mySwiper"
       >
-        <SwiperSlide>Slide 1</SwiperSlide>
-        <SwiperSlide>Slide 2</SwiperSlide>
-        <SwiperSlide>Slide 3</SwiperSlide>
+        <SwiperSlide>
+          <Page0 />
+        </SwiperSlide>
+        <SwiperSlide>
+          <Page1 />
+        </SwiperSlide>
+        <SwiperSlide>
+          <Page2 />
+        </SwiperSlide>
         <SwiperSlide>Slide 4</SwiperSlide>
         <SwiperSlide>Slide 5</SwiperSlide>
         <SwiperSlide>Slide 6</SwiperSlide>

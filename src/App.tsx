@@ -10,27 +10,28 @@ const App = observer(() => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <div className="p-home">
-      {/* <ShaderBackground fragShader={shaderString} /> */}
+      <ShaderBackground fragShader={shaderString} />
       <div className="page-contents">
-        <Slideshow />
-        {/* <div className="hero-box">
-          <h1 className="header">
-            See the music you <em>hated</em> in {new Date().getFullYear()}
-          </h1>
-          <p className="sub-header">
-            Find the songs that are killing your vibe.{" "}
-          </p>
-          <button
-            className="buttonify"
-            onClick={() => dialogRef.current?.showModal()}
-          >
-            Let's go
-          </button>
-          <dialog className="upload-modal" ref={dialogRef} onClose={() => {}}>
-            <DataUpload />
-          </dialog>
-        </div>
-        {musicData$.get() && <Slideshow />} */}
+        {!musicData$.get() && (
+          <div className="hero-box">
+            <h1 className="header">
+              See the music you <em>hated</em> in {new Date().getFullYear()}
+            </h1>
+            <p className="sub-header">
+              Find the songs that are killing your vibe.{" "}
+            </p>
+            <button
+              className="buttonify"
+              onClick={() => dialogRef.current?.showModal()}
+            >
+              Let's go
+            </button>
+            <dialog className="upload-modal" ref={dialogRef} onClose={() => {}}>
+              <DataUpload />
+            </dialog>
+          </div>
+        )}
+        {musicData$.get() && <Slideshow />}
       </div>
     </div>
   );
