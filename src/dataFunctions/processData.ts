@@ -16,12 +16,13 @@ interface ComputedCol {
 export function processData(
   spotifyData: SpotifyStreamingData[]
 ): ProcessedData {
-  const dt = from(spotifyData);
+  const dt = from(spotifyData).derive({
+    fwdBtnPress: (d) => (d.reason_end === "fwdbtn" ? 1 : 0),
+  });
   const totals = dt
     .rollup({
       skips: op.sum("skipped"),
-      fwdbtnCount: (d) =>
-        op.sum(d.reason_end === "fwdbtn" && !d.skipped ? 1 : 0),
+      fwdbtnCount: op.sum("fwdBtnPress"),
       count: op.count(),
     })
     .objects()[0];
@@ -37,8 +38,7 @@ export function processData(
     .rollup({
       totalPlays: op.count(),
       skips: op.sum("skipped"),
-      fwdbtnCount: (d) =>
-        op.sum(d.reason_end === "fwdbtn" && !d.skipped ? 1 : 0),
+      fwdBtnCount: op.sum("fwdBtnPress"),
       suffered: (d) => op.sum(d.ms_played || 0) * 0.001,
       timeToSkip: (d) => op.mean(d.ms_played || 0) * 0.001,
     })
