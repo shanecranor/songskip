@@ -1,9 +1,17 @@
 import { SpotifyStreamingData } from "@/types";
-import { ColumnTable, desc, from, op, range } from "arquero";
+import { desc, from, op, range } from "arquero";
 export interface ProcessedData {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   totals: { skips: number; fwdbtnCount: number; count: number };
-  mostSkipped: any[];
+  skipability: (SpotifyStreamingData & ComputedCol)[];
+  fastSkips: (SpotifyStreamingData & ComputedCol)[];
+}
+interface ComputedCol {
+  skipability: number;
+  skips: number;
+  fwdBtnCount: number;
+  suffered: number;
+  timeToSkip: number;
+  totalPlays: number;
 }
 export function processData(
   spotifyData: SpotifyStreamingData[]
@@ -24,24 +32,32 @@ export function processData(
   //you skipped 18% of the songs you listened to this year
   //find out which songs you hated the most
   //which songs did you skip (on average) the fastest
-  const mostSkipped = dt
-    .groupby("master_metadata_track_name")
+  const badSongs = dt
+    .groupby("master_metadata_track_name", "master_metadata_album_artist_name")
     .rollup({
-      total_plays: op.count(),
+      totalPlays: op.count(),
       skips: op.sum("skipped"),
       fwdbtnCount: (d) =>
         op.sum(d.reason_end === "fwdbtn" && !d.skipped ? 1 : 0),
-      // endplayCount: (d) => op.sum(d.reason_end === "endplay" ? 1 : 0),
-      // trackdoneCount: (d) => op.sum(d.reason_end === "trackdone" ? 1 : 0),
-      suffered: (d) => op.sum(d.ms_played * 0.001),
-      time_to_skip: (d) => op.mean(d.ms_played) * 0.001,
+      suffered: (d) => op.sum(d.ms_played || 0) * 0.001,
+      timeToSkip: (d) => op.mean(d.ms_played || 0) * 0.001,
     })
-    .filter((d) => d.total_plays > 3)
-    .derive({ skipability: (d) => d.skips / d.total_plays })
-    .filter((d) => d.skipability > 0.48)
-    // .orderby(desc("skipability"), desc("count"))
-    .orderby("time_to_skip")
-    .select(range(0, 10))
-    .objects();
-  return { totals, mostSkipped };
+    .filter((d) => d.totalPlays > 3)
+    .derive({ skipability: (d) => d.skips / d.totalPlays })
+    .filter((d) => d.skipability > 0.48);
+
+  console.log("BAD SONGS", badSongs.objects());
+
+  const skipability = badSongs
+    .orderby(desc("skipability"), desc("totalPlays"))
+    .objects()
+    .slice(0, 5);
+
+  console.log("SKIPABILITY", skipability);
+
+  const fastSkips = badSongs.orderby("timeToSkip").objects().slice(0, 5);
+
+  console.log("FAST SKIPS", fastSkips);
+
+  return { totals, skipability, fastSkips };
 }

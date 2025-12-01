@@ -22,7 +22,7 @@ export const Page0 = () => {
     <div>
       <h1>You skipped {skips} songs this year</h1>
       <p>
-        That is {skipPercent.toFixed(0)}% of the songs you listened to this year
+        That is {skipPercent.toFixed(1)}% of the songs you listened to this year
       </p>
     </div>
   );

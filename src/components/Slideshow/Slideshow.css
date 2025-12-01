@@ -1,0 +1,59 @@
+.c-slideshow {
+  width: 100dvw;
+  height: 100dvh;
+  /* background: blue; */
+}
+
+.swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.swiper-slide {
+  text-align: center;
+  font-size: 18px;
+  /* background: red; */
+
+  /* Center slide text vertically */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.swiper-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.song-list {
+  display: flex;
+  flex-direction: column;
+  .song-list-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    align-items: center;
+    .skip-time {
+      width: 100px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      padding: 16px;
+    }
+    .song-details {
+      max-width: 400px;
+      white-space: nowrap;
+      text-align: left;
+      .song-name {
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .artist-name {
+        font-weight: 400;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+}
