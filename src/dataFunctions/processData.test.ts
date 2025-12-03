@@ -55,13 +55,58 @@ const forwardButtonData: SpotifyStreamingData[] = [
 
 describe("processData forward button aggregation", () => {
   it("counts forward-button presses in overall totals", () => {
-    const result = processData(forwardButtonData);
+    const result = processData(forwardButtonData, { limitToPastYear: false });
     expect(result.totals.fwdbtnCount).toBe(2);
   });
 
   it("counts forward-button presses per track", () => {
-    const result = processData(forwardButtonData);
+    const result = processData(forwardButtonData, { limitToPastYear: false });
     const track = result.fastSkips[0];
     expect(track?.fwdBtnCount).toBe(2);
+  });
+});
+
+describe("processData date filtering", () => {
+  const referenceDate = new Date("2025-01-01T00:00:00.000Z");
+
+  it("drops events older than one year by default", () => {
+    const data: SpotifyStreamingData[] = [
+      createEvent({
+        ts: "2023-01-01T00:00:00.000Z",
+        skipped: true,
+        reason_end: "fwdbtn",
+      }),
+      createEvent({
+        ts: "2024-07-01T00:00:00.000Z",
+        skipped: false,
+      }),
+    ];
+
+    const result = processData(data, { referenceDate });
+
+    expect(result.totals.count).toBe(1);
+    expect(result.totals.skips).toBe(0);
+  });
+
+  it("keeps older events when limitToPastYear is false", () => {
+    const data: SpotifyStreamingData[] = [
+      createEvent({
+        ts: "2023-01-01T00:00:00.000Z",
+        skipped: true,
+        reason_end: "fwdbtn",
+      }),
+      createEvent({
+        ts: "2024-07-01T00:00:00.000Z",
+        skipped: false,
+      }),
+    ];
+
+    const result = processData(data, {
+      limitToPastYear: false,
+      referenceDate,
+    });
+
+    expect(result.totals.count).toBe(2);
+    expect(result.totals.skips).toBe(1);
   });
 });
