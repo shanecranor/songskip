@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@legendapp/state": "^3.0.0-beta.19",
+    "@types/node": "^24.10.1",
     "arquero": "^7.2.0",
     "fflate": "^0.8.2",
     "motion": "^11.15.0",
