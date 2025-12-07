@@ -5,6 +5,8 @@ declare const self: Worker;
 
 let table: aq.ColumnTable | null = null;
 let skippedTable: aq.ColumnTable | null = null;
+let initDuration = 0;
+let ingestDuration = 0;
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;
@@ -13,18 +15,13 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         if (type === 'LOAD_DATA') {
             const { payload } = e.data as { payload: Blob };
 
-            const startLoad = performance.now();
+            const startInit = performance.now();
             const text = await payload.text();
             const json = JSON.parse(text);
+            const endInit = performance.now();
+            initDuration = endInit - startInit;
 
-            // Arquero from() handles array of objects
-            // We should ensure timestamps are parsed or parse them now
-            // For fairness with DuckDB (which might auto-detect), we'll do explicit parsing
-            // or let Arquero infer. Arquero infers usually.
-            // But for math operations on dates, we usually need Date objects or numbers.
-            // Let's preprocess the JSON to convert TS string to Date/Number or use a derive.
-            // Using derive is more "engine-like".
-
+            const startIngest = performance.now();
             const op = aq.op;
 
             // Load, parse, sort, and index in one go (Data Warehouse style)
@@ -42,11 +39,12 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // This reduces working set size significantly for metrics that only care about skipped tracks
             skippedTable = table.filter((d: any) => d.skipped);
 
-            const endLoad = performance.now();
+            const endIngest = performance.now();
+            ingestDuration = endIngest - startIngest;
 
             const response: WorkerResponse = {
                 type: 'LOAD_DONE',
-                duration: endLoad - startLoad
+                duration: initDuration + ingestDuration
             };
             self.postMessage(response);
 
@@ -110,17 +108,21 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     burst: {
                         engine: 'arquero',
                         metric: 'burst',
-                        loadTime: 0,
+                        initTime: initDuration,
+                        ingestTime: ingestDuration,
+                        loadTime: initDuration + ingestDuration,
                         calcTime: endBurst - startBurst,
-                        totalTime: endBurst - startBurst,
+                        totalTime: (initDuration + ingestDuration) + (endBurst - startBurst),
                         resultCount: burstCount
                     },
                     streak: {
                         engine: 'arquero',
                         metric: 'streak',
-                        loadTime: 0,
+                        initTime: initDuration,
+                        ingestTime: ingestDuration,
+                        loadTime: initDuration + ingestDuration,
                         calcTime: endStreak - startStreak,
-                        totalTime: endStreak - startStreak,
+                        totalTime: (initDuration + ingestDuration) + (endStreak - startStreak),
                         resultCount: streakCount
                     }
                 }

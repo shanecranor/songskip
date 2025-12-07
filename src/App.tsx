@@ -211,13 +211,24 @@ function App() {
         <div className="card">
           <div className="card-header">
             <div className="card-title">3. Results</div>
+            <button
+              className="button secondary"
+              onClick={() => setResults([])}
+              style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
+            >
+              Clear Results
+            </button>
           </div>
           <table>
             <thead>
               <tr>
                 <th>Engine</th>
                 <th>Metric</th>
+                <th>Init (ms)</th>
+                <th>Ingest (ms)</th>
+                <th>Load Time (ms)</th>
                 <th>Calc Time (ms)</th>
+                <th>Total Time (ms)</th>
                 <th>Result Count</th>
               </tr>
             </thead>
@@ -229,7 +240,11 @@ function App() {
                 <tr key={i}>
                   <td className="highlight" style={{ textTransform: 'capitalize' }}>{r.engine}</td>
                   <td style={{ textTransform: 'capitalize' }}>{r.metric}</td>
-                  <td style={{ fontFamily: 'monospace' }}>{r.calcTime.toFixed(2)}</td>
+                  <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{r.initTime.toFixed(0)}</td>
+                  <td style={{ fontFamily: 'monospace', color: '#64748b' }}>{r.ingestTime.toFixed(0)}</td>
+                  <td style={{ fontFamily: 'monospace', color: '#64748b' }}>{r.loadTime.toFixed(2)}</td>
+                  <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{r.calcTime.toFixed(2)}</td>
+                  <td style={{ fontFamily: 'monospace' }}>{r.totalTime.toFixed(2)}</td>
                   <td style={{ fontFamily: 'monospace' }}>{r.resultCount.toLocaleString()}</td>
                 </tr>
               ))}

@@ -6,6 +6,8 @@ declare const self: Worker;
 
 let db: duckdb.AsyncDuckDB | null = null;
 let conn: duckdb.AsyncDuckDBConnection | null = null;
+let initDuration = 0;
+let ingestDuration = 0;
 
 const initDuckDB = async () => {
     if (db) return;
@@ -29,38 +31,42 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     try {
         if (type === 'LOAD_DATA') {
+            // Init time is essentially 0 for subsequent loads if we don't re-init, 
+            // but effectively we might consider 'init' as 'loading the file content' vs 'ingesting into DB'.
+            // Actually, for DuckDB, 'init' was the WASM load which happens once.
+            // Let's track WASM init time separate likely? 
+            // The current code calls initDuckDB() inside LOAD_DATA.
+
+            const startInit = performance.now();
             await initDuckDB();
+            const endInit = performance.now();
+            initDuration = (initDuration === 0) ? (endInit - startInit) : 0; // Only count first init? Or just report 0 if already done.
+
             if (!conn || !db) throw new Error("DuckDB not initialized");
 
             const { payload } = e.data as { payload: Blob };
             const tableName = 'streaming_history';
             const fileName = 'data.json';
 
-            const startLoad = performance.now();
+            const startIngest = performance.now();
 
             // Register the file
             await db.registerFileHandle(fileName, payload, duckdb.DuckDBDataProtocol.BROWSER_FILEREADER, true);
 
             // Create table from JSON
-            // We use auto detect via read_json_auto
             await conn.query(`
                 CREATE OR REPLACE TABLE ${tableName} AS 
                 SELECT * FROM read_json_auto('${fileName}');
             `);
 
-            // Standardize timestamp to TIMESTAMP type if it's currently string
-            // JSON usually imports as VARCHAR for ISO strings, so let's try to cast it for performance/correctness
-            // BUT read_json_auto is smart. Let's verify schema later if needed.
-            // For safety, let's ensure 'ts' is TIMESTAMP.
-            // We can do a quick check or just trust auto-detection for ISO8601.
-            // Actually, let's create a view or alter table to ensure 'ts' is handled correctly if needed.
-            // For now, assuming read_json_auto handles ISO timestamps correctly as TIMESTAMP or VARCHAR we can cast.
+            // Check/Cast TS if needed (skipped for now as per previous logic)
 
-            const endLoad = performance.now();
+            const endIngest = performance.now();
+            ingestDuration = endIngest - startIngest;
 
             const response: WorkerResponse = {
                 type: 'LOAD_DONE',
-                duration: endLoad - startLoad
+                duration: initDuration + ingestDuration
             };
             self.postMessage(response);
 
@@ -148,17 +154,21 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     burst: {
                         engine: 'duckdb',
                         metric: 'burst',
-                        loadTime: 0, // Already loaded
+                        initTime: initDuration,
+                        ingestTime: ingestDuration,
+                        loadTime: initDuration + ingestDuration,
                         calcTime: endBurst - startBurst,
-                        totalTime: endBurst - startBurst,
+                        totalTime: (initDuration + ingestDuration) + (endBurst - startBurst),
                         resultCount: burstCount
                     },
                     streak: {
                         engine: 'duckdb',
                         metric: 'streak',
-                        loadTime: 0,
+                        initTime: initDuration,
+                        ingestTime: ingestDuration,
+                        loadTime: initDuration + ingestDuration,
                         calcTime: endStreak - startStreak,
-                        totalTime: endStreak - startStreak,
+                        totalTime: (initDuration + ingestDuration) + (endStreak - startStreak),
                         resultCount: streakCount
                     }
                 }

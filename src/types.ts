@@ -29,7 +29,9 @@ export type EngineType = 'duckdb' | 'arquero';
 export interface BenchmarkResult {
     engine: EngineType;
     metric: 'burst' | 'streak';
-    loadTime: number; // ms
+    initTime: number; // ms (startup/parsing)
+    ingestTime: number; // ms (table creation/indexing)
+    loadTime: number; // ms (total)
     calcTime: number; // ms
     totalTime: number; // ms
     resultCount: number; // found N bursts/streaks
