@@ -39,7 +39,8 @@ export interface BenchmarkResult {
 
 export type WorkerMessage =
     | { type: 'LOAD_DATA'; payload: Blob }
-    | { type: 'RUN_METRICS' };
+    | { type: 'RUN_METRICS' }
+    | { type: 'INITIALIZE' };
 
 export type WorkerResponse =
     | { type: 'LOAD_DONE'; duration: number }

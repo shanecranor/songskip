@@ -30,17 +30,21 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;
 
     try {
-        if (type === 'LOAD_DATA') {
-            // Init time is essentially 0 for subsequent loads if we don't re-init, 
-            // but effectively we might consider 'init' as 'loading the file content' vs 'ingesting into DB'.
-            // Actually, for DuckDB, 'init' was the WASM load which happens once.
-            // Let's track WASM init time separate likely? 
-            // The current code calls initDuckDB() inside LOAD_DATA.
-
+        if (type === 'INITIALIZE') {
             const startInit = performance.now();
             await initDuckDB();
             const endInit = performance.now();
-            initDuration = (initDuration === 0) ? (endInit - startInit) : 0; // Only count first init? Or just report 0 if already done.
+            initDuration = endInit - startInit;
+            self.postMessage({ type: 'LOAD_DONE', duration: 0 }); // Ack
+
+        } else if (type === 'LOAD_DATA') {
+            // Ensure initialized if not already (fallback)
+            if (!db) {
+                const startInit = performance.now();
+                await initDuckDB();
+                const endInit = performance.now();
+                initDuration = endInit - startInit;
+            }
 
             if (!conn || !db) throw new Error("DuckDB not initialized");
 
@@ -59,33 +63,21 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 SELECT * FROM read_json_auto('${fileName}');
             `);
 
-            // Check/Cast TS if needed (skipped for now as per previous logic)
-
-            const endIngest = performance.now();
-            ingestDuration = endIngest - startIngest;
-
-            const response: WorkerResponse = {
-                type: 'LOAD_DONE',
-                duration: initDuration + ingestDuration
-            };
-            self.postMessage(response);
-
-        } else if (type === 'RUN_METRICS') {
-            if (!conn) throw new Error("Database not connected");
-
-            // BURST METRIC
-            // Definition: Users skipping 10 tracks within a 60-second window.
-            // Logic: Filter skipped=true -> Look back 10 rows (including current) -> If diff < 60s, it's a burst.
-            // Actually, "10 tracks within 60s" usually means current track N and track N-9 have a time diff <= 60s.
-
-            const startBurst = performance.now();
-
             // We need to parse 'ts' if it's string.
             // Let's assume it is TIMESTAMP or cast it.
             // "skipping 10 tracks" -> window size 10. 
-            // We want to count HOW MANY such events occur or just flag them?
+            const endIngest = performance.now();
+            ingestDuration = endIngest - startIngest;
+
+            self.postMessage({ type: 'LOAD_DONE', duration: ingestDuration });
+
+        } else if (type === 'RUN_METRICS') {
+            if (!conn || !db) throw new Error("Database not initialized or data not loaded");
+
             // "Metric 1: Burst Skipping... Calculate..." pattern usually implies counting them or finding them.
             // Let's count the number of rows that satisfy the condition (marking the END of a burst).
+
+            const startBurst = performance.now();
 
             const burstQuery = `
                 WITH skips AS (
@@ -156,9 +148,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                         metric: 'burst',
                         initTime: initDuration,
                         ingestTime: ingestDuration,
-                        loadTime: initDuration + ingestDuration,
+                        loadTime: ingestDuration, // Total Effective Load Time (Init excluded from Benchmark)
                         calcTime: endBurst - startBurst,
-                        totalTime: (initDuration + ingestDuration) + (endBurst - startBurst),
+                        totalTime: ingestDuration + (endBurst - startBurst),
                         resultCount: burstCount
                     },
                     streak: {
@@ -166,9 +158,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                         metric: 'streak',
                         initTime: initDuration,
                         ingestTime: ingestDuration,
-                        loadTime: initDuration + ingestDuration,
+                        loadTime: ingestDuration,
                         calcTime: endStreak - startStreak,
-                        totalTime: (initDuration + ingestDuration) + (endStreak - startStreak),
+                        totalTime: ingestDuration + (endStreak - startStreak),
                         resultCount: streakCount
                     }
                 }

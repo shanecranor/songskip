@@ -96,8 +96,15 @@ function App() {
     }, 100);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  useEffect(() => {
+    if (duckWorker) {
+      // Initialize DuckDB eagerly
+      duckWorker.postMessage({ type: 'INITIALIZE' } satisfies WorkerMessage);
+    }
+  }, [duckWorker]);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
     if (!files || files.length === 0) return;
 
     setDuckStatus('loading');
