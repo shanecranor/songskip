@@ -63,9 +63,25 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 SELECT * FROM read_json_auto('${fileName}');
             `);
 
-            // We need to parse 'ts' if it's string.
-            // Let's assume it is TIMESTAMP or cast it.
-            // "skipping 10 tracks" -> window size 10. 
+            // Create Materialized View for "Skipped" tracks
+            // We pre-calculate row_number() on the full table to perform Gaps-and-Islands later (Streak metric)
+            // This mirrors the Arquero "Data Warehouse" optimization.
+            // CAREFUL: row_number() must be calculated on the FULL table before filtering, otherwise we lose the gaps!
+            // In SQL, Window Functions happen after WHERE. So we need a subquery or CTE.
+
+            await conn.query(`
+                CREATE OR REPLACE TABLE skipped_history AS 
+                SELECT * FROM (
+                    SELECT 
+                        ts::TIMESTAMP as ts,
+                        skipped,
+                        row_number() OVER (ORDER BY ts) as overall_rn
+                    FROM ${tableName}
+                )
+                WHERE skipped = true
+                ORDER BY ts;
+            `);
+
             const endIngest = performance.now();
             ingestDuration = endIngest - startIngest;
 
@@ -74,64 +90,51 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         } else if (type === 'RUN_METRICS') {
             if (!conn || !db) throw new Error("Database not initialized or data not loaded");
 
-            // "Metric 1: Burst Skipping... Calculate..." pattern usually implies counting them or finding them.
-            // Let's count the number of rows that satisfy the condition (marking the END of a burst).
+            // BURST METRIC
+            // Querying the pre-filtered, pre-sorted 'skipped_history' table.
 
             const startBurst = performance.now();
 
-            const burstQuery = `
-                WITH skips AS (
-                    SELECT 
-                        ts::TIMESTAMP as ts,
-                        skipped
-                    FROM streaming_history
-                    WHERE skipped = true
-                ),
-                lagged AS (
-                    SELECT 
-                        ts,
-                        LAG(ts, 9) OVER (ORDER BY ts) as prev_ts
-                    FROM skips
-                )
+            const burstResult = await conn.query(`
                 SELECT count(*) as count
-                FROM lagged
-                WHERE prev_ts IS NOT NULL 
-                  AND date_diff('second', prev_ts, ts) <= 60;
-            `;
+                FROM (
+                    SELECT 
+                        ts, 
+                        lag(ts, 9) OVER (ORDER BY ts) as prev_ts
+                    FROM skipped_history
+                )
+                WHERE (date_diff('ms', prev_ts, ts) <= 60000);
+            `);
 
-            const burstResult = await conn.query(burstQuery);
+            // Note: date_diff in ms. 
+            // We removed ::TIMESTAMP casts because the column is NOW a native TIMESTAMP.
+
             const burstCount = Number(burstResult.toArray()[0]['count']);
             const endBurst = performance.now();
 
             // STREAK METRIC
-            // Definition: A consecutive sequence of tracks where skipped=true. Size >= 10.
+            // Using the pre-calculated overall_rn from Ingest phase.
+            // skipped_history already has overall_rn.
+            // subset_rn is implied by the current row_number() in skipped_history.
 
             const startStreak = performance.now();
 
-            // Gaps and Islands for streaks
-            // We care about consecutive rows in the original table order (assuming table is ordered by TS or original insertion?)
-            // The table from JSON should preserve order. To be safe, we should order by TS.
-
-            const streakQuery = `
-                WITH marked AS (
+            const streakResult = await conn.query(`
+                WITH groups AS (
                     SELECT 
-                        skipped,
-                        row_number() OVER (ORDER BY ts::TIMESTAMP) - 
-                        row_number() OVER (PARTITION BY skipped ORDER BY ts::TIMESTAMP) as grp
-                    FROM streaming_history
+                        overall_rn - row_number() OVER (ORDER BY ts) as grp
+                    FROM skipped_history
                 ),
-                groups AS (
+                group_counts AS (
                     SELECT count(*) as size
-                    FROM marked
-                    WHERE skipped = true
+                    FROM groups
                     GROUP BY grp
                 )
                 SELECT count(*) as count
-                FROM groups
+                FROM group_counts
                 WHERE size >= 10;
-            `;
+            `);
 
-            const streakResult = await conn.query(streakQuery);
             const streakCount = Number(streakResult.toArray()[0]['count']);
             const endStreak = performance.now();
 
