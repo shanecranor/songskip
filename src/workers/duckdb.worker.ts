@@ -12,10 +12,15 @@ let ingestDuration = 0;
 const initDuckDB = async () => {
     if (db) return;
 
-    // Use specific bundles manually to avoid dynamic import issues in some Vite setups,
-    // though for simplicity we can try the manual bundle selection if needed.
-    // Ideally we use the jsdelivr CDN approach or serve files locally.
-    // For this environment, we'll try the standard selectBundle.
+    // REVERTING TO JSDELIVR (CDN) APPROACH
+    // Why? The @duckdb/duckdb-wasm npm package does NOT include the specific Wasm extension files 
+    // (like json.duckdb_extension.wasm) required for features like `read_json_auto`.
+    // These extensions are hosted on extensions.duckdb.org.
+    // By using getJsDelivrBundles(), we allow DuckDB to automatically configure itself to fetch 
+    // the correct extensions from the CDN that match the loaded Wasm version.
+    // A pure-local setup would require manually downloading and managing these binary extension files,
+    // which is fragile and error-prone.
+
     const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
     const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
 
@@ -57,7 +62,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // Register the file
             await db.registerFileHandle(fileName, payload, duckdb.DuckDBDataProtocol.BROWSER_FILEREADER, true);
 
-            // Create table from JSON
+            // Create table from JSON using available extension (CDN)
             await conn.query(`
                 CREATE OR REPLACE TABLE ${tableName} AS 
                 SELECT * FROM read_json_auto('${fileName}');
