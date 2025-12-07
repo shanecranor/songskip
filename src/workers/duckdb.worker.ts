@@ -69,9 +69,17 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // CAREFUL: row_number() must be calculated on the FULL table before filtering, otherwise we lose the gaps!
             // In SQL, Window Functions happen after WHERE. So we need a subquery or CTE.
 
+            // OPTIMIZATION ROUND 3: Pre-calculate Window Functions (Lag, Subset Row Number)
+            // We calculate 'subset_rn' (row number within the skipped set) and 'prev_ts' (lag 9) here.
+            // This moves ALL computational complexity to Ingest. Calc becomes a simple scan.
+
             await conn.query(`
                 CREATE OR REPLACE TABLE skipped_history AS 
-                SELECT * FROM (
+                SELECT 
+                    *,
+                    row_number() OVER (ORDER BY ts) as subset_rn,
+                    lag(ts, 9) OVER (ORDER BY ts) as prev_ts_9
+                FROM (
                     SELECT 
                         ts::TIMESTAMP as ts,
                         skipped,
@@ -97,13 +105,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
             const burstResult = await conn.query(`
                 SELECT count(*) as count
-                FROM (
-                    SELECT 
-                        ts, 
-                        lag(ts, 9) OVER (ORDER BY ts) as prev_ts
-                    FROM skipped_history
-                )
-                WHERE (date_diff('ms', prev_ts, ts) <= 60000);
+                FROM skipped_history
+                WHERE prev_ts_9 IS NOT NULL 
+                  AND (date_diff('ms', prev_ts_9, ts) <= 60000);
             `);
 
             // Note: date_diff in ms. 
@@ -114,21 +118,14 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
             // STREAK METRIC
             // Using the pre-calculated overall_rn from Ingest phase.
-            // skipped_history already has overall_rn.
-            // subset_rn is implied by the current row_number() in skipped_history.
 
             const startStreak = performance.now();
 
             const streakResult = await conn.query(`
-                WITH groups AS (
-                    SELECT 
-                        overall_rn - row_number() OVER (ORDER BY ts) as grp
-                    FROM skipped_history
-                ),
-                group_counts AS (
+                WITH group_counts AS (
                     SELECT count(*) as size
-                    FROM groups
-                    GROUP BY grp
+                    FROM skipped_history
+                    GROUP BY (overall_rn - subset_rn)
                 )
                 SELECT count(*) as count
                 FROM group_counts
