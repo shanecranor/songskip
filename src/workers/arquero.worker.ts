@@ -31,7 +31,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             table = table.derive({
                 ts: (d: any) => aq.op.parse_date(d.ts), // Parse ISO string to timestamp number
                 skipped: (d: any) => d.skipped === true // ensure boolean
-            });
+            })
+                .orderby('ts'); // Sort once during load
 
             const endLoad = performance.now();
 
@@ -56,7 +57,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // DuckDB query included ORDER BY.
 
             const burstCount = table
-                .orderby('ts')
+                // .orderby('ts') // Already sorted in LOAD_DATA
                 .filter((d: any) => d.skipped)
                 .derive({
                     prev_ts: op.lag('ts', 9)
@@ -83,7 +84,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             const startStreak = performance.now();
 
             const streakCount = table
-                .orderby('ts')
+                // .orderby('ts') // Already sorted in LOAD_DATA
                 .derive({
                     overall_rn: op.row_number()
                 })
