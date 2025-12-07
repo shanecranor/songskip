@@ -8,7 +8,6 @@ export interface ProcessedData {
 interface ComputedCol {
   skipability: number;
   skips: number;
-  fwdBtnCount: number;
   suffered: number;
   timeToSkip: number;
   totalPlays: number;
@@ -44,7 +43,6 @@ export function processData(
   const totals = dt
     .rollup({
       skips: op.sum("skipped"),
-      fwdbtnCount: op.sum("fwdBtnPress"),
       count: op.count(),
     })
     .objects()[0] as ProcessedData["totals"];
@@ -60,7 +58,6 @@ export function processData(
     .rollup({
       totalPlays: op.count(),
       skips: op.sum("skipped"),
-      fwdBtnCount: op.sum("fwdBtnPress"),
       suffered: (d) => op.sum(d.ms_played || 0) * 0.001,
       timeToSkip: (d) => op.mean(d.ms_played || 0) * 0.001,
     })
