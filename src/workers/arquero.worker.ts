@@ -4,6 +4,7 @@ import type { WorkerMessage, WorkerResponse } from '../types';
 declare const self: Worker;
 
 let table: aq.ColumnTable | null = null;
+let skippedTable: aq.ColumnTable | null = null;
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;
@@ -24,15 +25,22 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // Let's preprocess the JSON to convert TS string to Date/Number or use a derive.
             // Using derive is more "engine-like".
 
-            table = aq.from(json);
+            const op = aq.op;
 
-            // Convert 'ts' to Date objects (number) for calculations
-            // and ensure 'skipped' is boolean
-            table = table.derive({
-                ts: (d: any) => aq.op.parse_date(d.ts), // Parse ISO string to timestamp number
-                skipped: (d: any) => d.skipped === true // ensure boolean
-            })
-                .orderby('ts'); // Sort once during load
+            // Load, parse, sort, and index in one go (Data Warehouse style)
+            table = aq.from(json)
+                .derive({
+                    ts: (d: any) => aq.op.parse_date(d.ts), // Parse ISO string to timestamp number
+                    skipped: (d: any) => d.skipped === true // ensure boolean
+                })
+                .orderby('ts') // Sort once
+                .derive({
+                    overall_rn: op.row_number() // Pre-calculate row number for the whole dataset
+                });
+
+            // Create "Materialized View" for skipped items
+            // This reduces working set size significantly for metrics that only care about skipped tracks
+            skippedTable = table.filter((d: any) => d.skipped);
 
             const endLoad = performance.now();
 
@@ -43,7 +51,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             self.postMessage(response);
 
         } else if (type === 'RUN_METRICS') {
-            if (!table) throw new Error("Table not loaded");
+            if (!table || !skippedTable) throw new Error("Table not loaded");
 
             const op = aq.op;
 
@@ -53,12 +61,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
             const startBurst = performance.now();
 
-            // We need to sort by TS to be safe, though input is usually sorted.
-            // DuckDB query included ORDER BY.
+            // Use the materialized view 'skippedTable'
+            // No need to filter(skipped) or sort(ts) again.
 
-            const burstCount = table
-                // .orderby('ts') // Already sorted in LOAD_DATA
-                .filter((d: any) => d.skipped)
+            const burstCount = skippedTable
                 .derive({
                     prev_ts: op.lag('ts', 9)
                 })
@@ -73,9 +79,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
             // grp = row_number() - rank() (partitioned by skipped? arquero has groupby)
 
             // Logic:
-            // 1. Sort by TS.
-            // 2. Calculate row_number (overall).
-            // 3. Filter for skipped = true.
+            // 1. Sort by TS (Done in LOAD).
+            // 2. Calculate row_number (overall) (Done in LOAD as 'overall_rn').
+            // 3. Filter for skipped = true (Done in LOAD as 'skippedTable').
             // 4. Calculate row_number (within this filtered set).
             // 5. Diff = row_number_overall - row_number_filtered. 
             //    Consecutive items will have the SAME Diff.
@@ -83,15 +89,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
             const startStreak = performance.now();
 
-            const streakCount = table
-                // .orderby('ts') // Already sorted in LOAD_DATA
-                .derive({
-                    overall_rn: op.row_number()
-                })
-                .filter((d: any) => d.skipped)
+            const streakCount = skippedTable
                 .derive({
                     subset_rn: op.row_number()
                 })
+                // overall_rn is already present from load phase
                 .derive({
                     diff: (d: any) => d.overall_rn - d.subset_rn
                 })
