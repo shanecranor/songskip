@@ -8,24 +8,44 @@ export interface ProcessedData {
 interface ComputedCol {
   skipability: number;
   skips: number;
-  fwdBtnCount: number;
   suffered: number;
   timeToSkip: number;
   totalPlays: number;
 }
+export interface ProcessDataOptions {
+  limitToPastYear?: boolean;
+  referenceDate?: Date;
+}
+
 export function processData(
-  spotifyData: SpotifyStreamingData[]
+  spotifyData: SpotifyStreamingData[],
+  options: ProcessDataOptions = {}
 ): ProcessedData {
-  const dt = from(spotifyData).derive({
+  const { limitToPastYear = true, referenceDate = new Date() } = options;
+  const referenceMs = referenceDate.getTime();
+  const cutoffDate = new Date(referenceMs);
+  cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+  const cutoffMs = cutoffDate.getTime();
+
+  const filteredData = limitToPastYear
+    ? spotifyData.filter((event) => {
+        const eventMs = Date.parse(event.ts);
+        if (Number.isNaN(eventMs)) {
+          return true;
+        }
+        return eventMs >= cutoffMs;
+      })
+    : spotifyData;
+
+  const dt = from(filteredData).derive({
     fwdBtnPress: (d) => (d.reason_end === "fwdbtn" ? 1 : 0),
   });
   const totals = dt
     .rollup({
       skips: op.sum("skipped"),
-      fwdbtnCount: op.sum("fwdBtnPress"),
       count: op.count(),
     })
-    .objects()[0];
+    .objects()[0] as ProcessedData["totals"];
   //loading screen
   //unzipping
   //loading into arquero
@@ -38,7 +58,6 @@ export function processData(
     .rollup({
       totalPlays: op.count(),
       skips: op.sum("skipped"),
-      fwdBtnCount: op.sum("fwdBtnPress"),
       suffered: (d) => op.sum(d.ms_played || 0) * 0.001,
       timeToSkip: (d) => op.mean(d.ms_played || 0) * 0.001,
     })
@@ -48,14 +67,18 @@ export function processData(
 
   console.log("BAD SONGS", badSongs.objects());
 
-  const skipability = badSongs
-    .orderby(desc("skipability"), desc("totalPlays"))
-    .objects()
-    .slice(0, 5);
+  const skipability = (
+    badSongs
+      .orderby(desc("skipability"), desc("totalPlays"))
+      .objects() as (SpotifyStreamingData & ComputedCol)[]
+  ).slice(0, 5);
 
   console.log("SKIPABILITY", skipability);
 
-  const fastSkips = badSongs.orderby("timeToSkip").objects().slice(0, 5);
+  const fastSkips = (
+    badSongs.orderby("timeToSkip").objects() as (SpotifyStreamingData &
+      ComputedCol)[]
+  ).slice(0, 5);
 
   console.log("FAST SKIPS", fastSkips);
 
