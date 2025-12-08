@@ -1,6 +1,15 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import type { WorkerMessage, WorkerResponse } from '../types';
 
+// Manual Bundle Imports for Vite
+import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
+import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
+import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
+import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
+// import duckdb_wasm_coi from '@duckdb/duckdb-wasm/dist/duckdb-coi.wasm?url';
+// import coi_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.worker.js?url';
+// import coi_pthread from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.pthread.worker.js?url';
+
 // Declare self for the worker context
 declare const self: Worker;
 
@@ -9,22 +18,30 @@ let conn: duckdb.AsyncDuckDBConnection | null = null;
 let initDuration = 0;
 let ingestDuration = 0;
 
+const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
+    mvp: {
+        mainModule: duckdb_wasm,
+        mainWorker: mvp_worker,
+    },
+    eh: {
+        mainModule: duckdb_wasm_eh,
+        mainWorker: eh_worker,
+    },
+    // coi: {
+    //     mainModule: duckdb_wasm_coi,
+    //     mainWorker: coi_worker,
+    //     pthreadWorker: coi_pthread,
+    // },
+};
+
 const initDuckDB = async () => {
-    if (db) return;
+    if (db) return; // Already initialized
 
-    // REVERTING TO JSDELIVR (CDN) APPROACH
-    // Why? The @duckdb/duckdb-wasm npm package does NOT include the specific Wasm extension files 
-    // (like json.duckdb_extension.wasm) required for features like `read_json_auto`.
-    // These extensions are hosted on extensions.duckdb.org.
-    // By using getJsDelivrBundles(), we allow DuckDB to automatically configure itself to fetch 
-    // the correct extensions from the CDN that match the loaded Wasm version.
-    // A pure-local setup would require manually downloading and managing these binary extension files,
-    // which is fragile and error-prone.
+    // Select bundle based on environment capabilities
+    const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
 
-    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-
-    const worker = await duckdb.createWorker(bundle.mainWorker!);
+    // Instantiate worker
+    const worker = new Worker(bundle.mainWorker!);
     const logger = new duckdb.ConsoleLogger();
     db = new duckdb.AsyncDuckDB(logger, worker);
     await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
