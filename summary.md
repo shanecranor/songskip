@@ -25,25 +25,31 @@ For client-side analytics on mid-sized datasets (~500k - 1M rows), **Arquero** o
 ## Technical Insights
 
 ### DuckDB-WASM Optimizations
-To make DuckDB competitive, we applied three optimizations:
+DuckDB optimizations
 1.  **Ingest-Phase "Data Warehouse"**: Instead of calculation `lag()` and `row_number()` at query time (Calc), we pre-calculated these into a `skipped_history` table during ingestion.
 2.  **Pre-Casting Timestamps**: Converting ISO strings (`2023-01-01T...`) to native `TIMESTAMP` types during ingestion saved massive amounts of CPU time during queries.
-3.  **COOP/COEP Headers**: Enabling `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` was essential to unlock `SharedArrayBuffer`, allowing DuckDB to use threads.
+~~3. **COI multi-threading**:~~ This may or may not yield performance benefits, but because of the DuckDB-Wasm bug, it was not worth it to implement. Once this issue is fixed, it should be considered, although the github issue has been open for over a year now.  
 
-### The "Extension" Challenge
-A minor annoyance is that extensions (like `json` and `parquet`) are not bundled in the NPM package so they must be loaded from a CDN instead of imported from an NPM package.
-
+### Issues using COI
+There is a DuckDB-Wasm bug for the wasm_threads target. The threaded COI engine and the json extension module don't agree on whether the imported WebAssembly memory is shared, so extension loading fails. See: https://github.com/duckdb/duckdb-wasm/issues/1916
 
 ## Conclusion
 
-### Choose **Arquero** if:
--   You are building a lightweight React/JS application.
--   Your dataset fits comfortably in memory.
--   You want simplicity
--   You prefer a functional, method-chaining API (`.filter().groupby().rollup()`).
--   You can live without full type safety.
+### Pros of  **Arquero**:
+-   Simple and lightweight
+-   Fast for smaller datasets that fit comfortably in memory.
+-   Fast ingest of data from JSON.
+### Cons of **Arquero**:
+-   No real typescript support
+-   Memory intensive for larger datasets (data must be stored in JS objects in memory)
+-   Slower for larger datasets after initial ingest.
 
-### Choose **DuckDB-WASM** if:
--   You need to query data larger than available RAM (DuckDB supports out-of-core processing with buffering).
--   You need **Complex SQL**: Recursive CTEs, complex joins, or window functions that are tedious to express in JS.
--   You are processing **Parquet** files (DuckDB's native strength).
+### Pros of **DuckDB-WASM**:
+-   Can query data larger than available RAM (DuckDB supports out-of-core processing with buffering)
+-   Supports complex SQL: Recursive CTEs, complex joins, or window functions that are tedious to express in JS.
+-   Parquet support.
+-   Pretty fast for larger datasets after initial ingest.
+### Cons of **DuckDB-WASM**:
+-   More complex setup.
+-   COI threading is buggy at time of writing.
+-   Heavy WASM runtime overhead - not worth it for smaller datasets
